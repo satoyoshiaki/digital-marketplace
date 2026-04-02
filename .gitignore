@@ -8,3 +8,9 @@ coverage
 *.log
 pixel-agents
 polymarket001
+
+# Sibling project repos (separate git repos)
+ai-task-dashboard/
+everything-claude-code/
+japan-intraday-ls/
+us-secular-leaders-trend-bot/
