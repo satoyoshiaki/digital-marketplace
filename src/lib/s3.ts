@@ -52,6 +52,8 @@ export async function createSignedDownloadUrl(key: string, expiresIn = 900) {
   );
 }
 
+export const getSignedDownloadUrl = createSignedDownloadUrl;
+
 export function buildObjectKey(prefix: string, filename: string) {
   const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "-");
   return `${prefix}/${Date.now()}-${safe}`;

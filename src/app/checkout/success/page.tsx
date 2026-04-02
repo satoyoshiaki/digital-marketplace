@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { stripe } from "@/lib/stripe";
+import { getBaseUrl } from "@/lib/utils";
 
 type CheckoutSuccessPageProps = {
   searchParams?: {
@@ -9,18 +9,33 @@ type CheckoutSuccessPageProps = {
   };
 };
 
+type DownloadResponse = {
+  downloads: Array<{
+    productTitle: string;
+    filename: string;
+    url: string;
+  }>;
+};
+
 export default async function CheckoutSuccessPage({
   searchParams,
 }: CheckoutSuccessPageProps) {
   const sessionId = searchParams?.session_id;
-  let orderReference = sessionId ?? "N/A";
+  let downloads: DownloadResponse["downloads"] = [];
 
-  if (sessionId && process.env.STRIPE_SECRET_KEY) {
+  if (sessionId) {
     try {
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
-      orderReference = session.payment_intent?.toString() ?? session.id;
+      const response = await fetch(
+        `${getBaseUrl()}/api/downloads/by-session/${sessionId}`,
+        { cache: "no-store" },
+      );
+
+      if (response.ok) {
+        const body = (await response.json()) as DownloadResponse;
+        downloads = body.downloads;
+      }
     } catch {
-      orderReference = sessionId;
+      downloads = [];
     }
   }
 
@@ -31,19 +46,41 @@ export default async function CheckoutSuccessPage({
           <CardTitle>購入が完了しました</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <p className="text-base leading-7 text-muted-foreground">
-            決済が確認されました。マイページから注文履歴とダウンロードに進めます。
-          </p>
-          <div className="rounded-3xl border border-border bg-secondary/30 p-5">
-            <p className="text-sm text-muted-foreground">Order reference</p>
-            <p className="mt-2 text-lg font-semibold">{orderReference}</p>
-          </div>
+          {sessionId ? (
+            <>
+              <p className="text-base leading-7 text-muted-foreground">
+                決済が確認されました。以下のリンクから購入したデジタル商品をダウンロードできます。
+              </p>
+              {downloads.length > 0 ? (
+                <div className="space-y-3">
+                  {downloads.map((download) => (
+                    <a
+                      key={`${download.productTitle}-${download.filename}`}
+                      href={download.url}
+                      className="flex items-center justify-between rounded-3xl border border-border px-5 py-4 text-sm font-medium hover:bg-secondary/30"
+                    >
+                      <span>{download.productTitle}</span>
+                      <span>{download.filename}</span>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  ダウンロードの準備中です。少し待ってからこのページを再読み込みしてください。
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-base leading-7 text-muted-foreground">
+              決済が完了しました。メールまたは決済完了画面からダウンロード情報をご確認ください。
+            </p>
+          )}
           <div className="flex flex-wrap gap-3">
-            <Link href="/mypage" className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
-              マイページへ
-            </Link>
-            <Link href="/products" className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">
+            <Link href="/products" className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
               商品一覧へ戻る
+            </Link>
+            <Link href="/cart" className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">
+              カートを見る
             </Link>
           </div>
         </CardContent>

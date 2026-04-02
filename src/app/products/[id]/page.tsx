@@ -1,12 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getCurrentUser } from "@/lib/auth";
 import { getProductById } from "@/lib/data";
-import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
 
 type ProductDetailPageProps = {
@@ -18,23 +15,11 @@ type ProductDetailPageProps = {
 export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
-  const [product, currentUser] = await Promise.all([
-    getProductById(params.id),
-    getCurrentUser(),
-  ]);
+  const product = await getProductById(params.id);
 
   if (!product) {
     notFound();
   }
-
-  const hasPurchased = currentUser
-    ? await prisma.download.findFirst({
-        where: {
-          userId: currentUser.id,
-          productId: product.id,
-        },
-      })
-    : null;
 
   const heroImage =
     product.images[0]?.url ??
@@ -90,15 +75,14 @@ export default async function ProductDetailPage({
                   {product._count?.orderItems ?? 0} sales
                 </p>
               </div>
-              <AddToCartButton productId={product.id} />
-              {hasPurchased ? (
-                <Link
-                  href={`/api/downloads/${hasPurchased.orderId}?productId=${product.id}`}
-                  className="block text-sm font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  購入済みコンテンツをダウンロード
-                </Link>
-              ) : null}
+              <AddToCartButton
+                item={{
+                  productId: product.id,
+                  title: product.title,
+                  price: product.price,
+                  imageUrl: product.images[0]?.url ?? null,
+                }}
+              />
             </CardContent>
           </Card>
         </div>

@@ -25,17 +25,15 @@ export async function SiteHeader() {
           </Link>
           {session?.user ? (
             <Button asChild variant="outline" size="sm">
-              <Link href="/mypage">My Page</Link>
+              <Link href="/seller/dashboard">Dashboard</Link>
             </Button>
           ) : (
-            <>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/auth/login">Log in</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/auth/register">Register</Link>
-              </Button>
-            </>
+            <Link
+              href="/auth/login"
+              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Seller Login
+            </Link>
           )}
         </div>
       </div>

@@ -1,15 +1,29 @@
-import Link from "next/link";
+import { UserRole } from "@prisma/client";
+import { redirect } from "next/navigation";
 
 import { LogoutButton } from "@/components/logout-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireUser } from "@/lib/auth";
+import { getAuthSession } from "@/lib/auth";
 import { getOrdersForUser } from "@/lib/data";
 import { formatDate, formatPrice } from "@/lib/utils";
 
 export default async function MyPage() {
-  const user = await requireUser();
-  const orders = await getOrdersForUser(user.id);
+  const session = await getAuthSession();
+
+  if (!session?.user) {
+    redirect("/auth/login");
+  }
+
+  if (
+    session.user.role !== UserRole.SELLER &&
+    session.user.role !== UserRole.ADMIN
+  ) {
+    redirect("/auth/login");
+  }
+
+  const orders = await getOrdersForUser(session.user.id);
+  const totalSpent = orders.reduce((sum, order) => sum + order.totalAmount, 0);
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-6 py-14">
@@ -17,16 +31,38 @@ export default async function MyPage() {
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <CardTitle>マイページ</CardTitle>
+            <p className="text-sm text-muted-foreground">このページは出品者・管理者専用です</p>
             <p className="text-sm text-muted-foreground">
-              {user.name ?? "Guest"} / {user.email}
+              {session.user.name ?? "User"} / {session.user.email}
             </p>
           </div>
           <LogoutButton />
         </CardHeader>
       </Card>
 
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="space-y-2 p-6">
+            <p className="text-sm text-muted-foreground">Completed Orders</p>
+            <p className="text-3xl font-semibold">{orders.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="space-y-2 p-6">
+            <p className="text-sm text-muted-foreground">Total Spent</p>
+            <p className="text-3xl font-semibold">{formatPrice(totalSpent)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="space-y-2 p-6">
+            <p className="text-sm text-muted-foreground">Role</p>
+            <p className="text-3xl font-semibold">{session.user.role}</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="space-y-5">
-        <h2 className="text-3xl font-semibold">注文履歴</h2>
+        <h2 className="text-3xl font-semibold">注文サマリー</h2>
         {orders.length > 0 ? (
           <div className="space-y-6">
             {orders.map((order) => (
@@ -49,30 +85,17 @@ export default async function MyPage() {
                     {order.items.map((item) => (
                       <div
                         key={item.id}
-                        className="flex flex-col gap-4 rounded-3xl border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
+                        className="flex flex-col gap-2 rounded-3xl border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div className="flex items-center gap-4">
-                          <img
-                            src={
-                              item.product.images[0]?.url ??
-                              "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80"
-                            }
-                            alt={item.product.title}
-                            className="h-16 w-16 rounded-2xl object-cover"
-                          />
-                          <div>
-                            <p className="font-medium">{item.titleSnapshot}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatPrice(item.price)} x {item.quantity}
-                            </p>
-                          </div>
+                        <div>
+                          <p className="font-medium">{item.titleSnapshot}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatPrice(item.price)} x {item.quantity}
+                          </p>
                         </div>
-                        <Link
-                          href={`/api/downloads/${order.id}?productId=${item.productId}`}
-                          className="rounded-full border border-border px-4 py-2 text-sm font-semibold"
-                        >
-                          Download
-                        </Link>
+                        <p className="text-sm text-muted-foreground">
+                          {formatPrice(item.price * item.quantity)}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -83,7 +106,7 @@ export default async function MyPage() {
         ) : (
           <Card>
             <CardContent className="p-8 text-sm text-muted-foreground">
-              購入済みの作品はまだありません。
+              参照できる注文はまだありません。
             </CardContent>
           </Card>
         )}

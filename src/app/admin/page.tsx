@@ -199,7 +199,7 @@ export default async function AdminPage() {
               {orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell>{order.id}</TableCell>
-                  <TableCell>{order.buyer.email}</TableCell>
+                  <TableCell>{order.buyer?.email ?? order.customerEmail ?? "Guest checkout"}</TableCell>
                   <TableCell>{formatPrice(order.totalAmount)}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{order.status}</Badge>

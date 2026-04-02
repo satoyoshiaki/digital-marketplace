@@ -149,7 +149,8 @@ model CartItem {
 
 model Order {
   id                    String       @id @default(cuid())
-  buyerId               String       @map("buyer_id")
+  buyerId               String?      @map("buyer_id")
+  customerEmail         String?      @map("customer_email")
   stripeSessionId       String?      @unique @map("stripe_session_id")
   stripePaymentIntentId String?      @unique @map("stripe_payment_intent_id")
   status                OrderStatus  @default(PENDING)
@@ -157,7 +158,7 @@ model Order {
   currency              String       @default("jpy")
   createdAt             DateTime     @default(now()) @map("created_at")
   updatedAt             DateTime     @updatedAt @map("updated_at")
-  buyer                 User         @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  buyer                 User?        @relation(fields: [buyerId], references: [id], onDelete: Cascade)
   items                 OrderItem[]
   downloads             Download[]
 
@@ -182,11 +183,11 @@ model OrderItem {
 
 model Download {
   id        String   @id @default(cuid())
-  userId    String   @map("user_id")
+  userId    String?  @map("user_id")
   productId String   @map("product_id")
   orderId   String   @map("order_id")
   createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
