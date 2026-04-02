@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/auth/login", request.url));
     }
 
-    if (![UserRole.SELLER, UserRole.ADMIN].includes(token.role as UserRole)) {
+    if (!(token.role === UserRole.SELLER || token.role === UserRole.ADMIN)) {
       return NextResponse.redirect(new URL("/auth/login", request.url));
     }
 

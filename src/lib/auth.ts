@@ -162,7 +162,7 @@ export async function requireUser() {
 export async function requireSeller() {
   const user = await requireUser();
 
-  if (![UserRole.SELLER, UserRole.ADMIN].includes(user.role)) {
+  if (!(user.role === UserRole.SELLER || user.role === UserRole.ADMIN)) {
     redirect("/");
   }
 
