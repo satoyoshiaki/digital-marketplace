@@ -1,102 +1,90 @@
-# Aster Blog Studio
+# Atelier Market
 
-Next.js 14 製のブログプラットフォームです。個人ブログや小規模メディア向けに設計しています。
+Next.js 14 / Prisma / NextAuth / Stripe / S3 SDK で構築した、BOOTH ライクなデジタルグッズ販売アプリです。購入者、出品者、管理者の 3 ロールに対応し、ローカル開発と GitHub への push を前提にそのまま使える構成にしています。
 
 ## 技術スタック
 
-- **フレームワーク**: Next.js 14 (App Router)
-- **データベース**: PostgreSQL + Prisma
-- **認証**: NextAuth.js (JWT + Credentials)
-- **スタイリング**: Tailwind CSS
-- **言語**: TypeScript
+- Next.js 14 App Router
+- TypeScript
+- Tailwind CSS
+- shadcn/ui 互換の UI コンポーネント
+- Prisma + PostgreSQL
+- NextAuth.js
+- Stripe Checkout / Webhooks
+- AWS S3 / Cloudflare R2
 
-## 機能
+## 主な機能
 
-### 公開サイト
-
-- トップページ（最新記事・カテゴリ一覧）
-- 記事詳細ページ
-- カテゴリ別・タグ別アーカイブ
-- 全文検索
-
-### 管理画面 (`/admin`)
-
-- 管理者ログイン
-- 記事の作成・編集・削除（下書き／公開）
-- カテゴリ管理
-- タグ管理
+- トップ、商品一覧、商品詳細、カート、購入完了
+- メールアドレス + パスワード認証
+- GitHub / Google OAuth を環境変数で有効化可能
+- セラー管理画面での商品作成、編集、画像アップロード、ファイルアップロード
+- 管理画面でのユーザー、注文、商品一覧
+- Stripe Webhook 経由の注文確定とダウンロード権限付与
+- 署名付き URL による 15 分限定ダウンロード
 
 ## セットアップ
 
-### 1. リポジトリをクローン
-
-```bash
-git clone https://github.com/satoyoshiaki/aster-blog-studio.git
-cd aster-blog-studio
-```
-
-### 2. 依存パッケージをインストール
-
 ```bash
 npm install
-```
-
-### 3. 環境変数を設定
-
-`.env.example` をコピーして `.env.local` を作成し、各値を設定します。
-
-```bash
 cp .env.example .env.local
 ```
 
-| 変数名 | 説明 |
-|---|---|
-| `DATABASE_URL` | PostgreSQL の接続URL |
-| `NEXTAUTH_URL` | アプリのベースURL（例: `http://localhost:3000`）|
-| `NEXTAUTH_SECRET` | セッション署名用のランダム文字列 |
+`.env.local` の主要項目:
 
-### 4. データベースを初期化
+- `DATABASE_URL`: PostgreSQL 接続文字列
+- `NEXTAUTH_URL`: 例 `http://localhost:3000`
+- `NEXTAUTH_SECRET`: ランダムな十分長い文字列
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+- `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`
+- `S3_ENDPOINT`: R2 利用時に設定
+
+## データベース初期化
 
 ```bash
-npm run db:push   # スキーマを反映
-npm run db:seed   # 初期データを投入
+npm run prisma:generate
+npm run db:push
+npm run db:seed
 ```
 
-シードで以下が作成されます：
+シードで以下を投入します。
 
-- 管理者アカウント: `admin@example.com` / `password123`
-- サンプルカテゴリ・タグ・記事
+- 管理者: `admin@example.com` / `password123`
+- カテゴリ
+- サンプル商品 5 件
+- サンプルセラー
 
-### 5. 開発サーバーを起動
+## 開発サーバー
 
 ```bash
 npm run dev
 ```
 
-[http://localhost:3000](http://localhost:3000) でアクセスできます。管理画面は [http://localhost:3000/admin](http://localhost:3000/admin) です。
+## Stripe Webhook
 
-## ディレクトリ構成
+ローカルでの受信例:
 
-```
-src/
-├── app/
-│   ├── admin/          # 管理画面
-│   ├── api/auth/       # NextAuth APIルート
-│   ├── blog/           # 記事・カテゴリ・タグページ
-│   ├── search/         # 検索ページ
-│   └── about/          # Aboutページ
-├── components/
-│   ├── admin/          # 管理画面用コンポーネント
-│   ├── blog/           # ブログ表示コンポーネント
-│   └── layout/         # ヘッダー・フッター
-├── lib/
-│   ├── actions.ts      # Server Actions
-│   ├── auth.ts         # 認証設定
-│   ├── data.ts         # データ取得関数
-│   └── prisma.ts       # Prismaクライアント
-└── types/              # 型定義
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
 
-## ライセンス
+## 主要ルート
 
-MIT
+- `/`
+- `/products`
+- `/products/[id]`
+- `/cart`
+- `/checkout/success`
+- `/auth/login`
+- `/auth/register`
+- `/mypage`
+- `/seller/dashboard`
+- `/seller/products/new`
+- `/seller/products/[id]/edit`
+- `/admin`
+
+## 備考
+
+- S3 の生 URL は返さず、ダウンロードは署名付き URL のみ返します。
+- OAuth は環境変数がある場合のみ有効化されます。
+- Stripe と S3 が未設定でも UI と基本 CRUD はローカル確認できますが、決済と実アップロードは設定が必要です。

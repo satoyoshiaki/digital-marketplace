@@ -14,6 +14,8 @@ const config: Config = {
         card: "hsl(var(--card))",
         "card-foreground": "hsl(var(--card-foreground))",
         border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
         muted: "hsl(var(--muted))",
         "muted-foreground": "hsl(var(--muted-foreground))",
         primary: "hsl(var(--primary))",
@@ -28,10 +30,11 @@ const config: Config = {
         display: ["var(--font-display)"]
       },
       boxShadow: {
-        glow: "0 12px 60px rgba(0, 0, 0, 0.35)"
+        soft: "0 24px 60px rgba(15, 23, 42, 0.08)",
+        card: "0 12px 32px rgba(15, 23, 42, 0.06)"
       },
       backgroundImage: {
-        grid: "linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px)"
+        mesh: "radial-gradient(circle at top left, rgba(253, 230, 138, 0.35), transparent 30%), radial-gradient(circle at top right, rgba(251, 191, 36, 0.18), transparent 28%)"
       }
     }
   },

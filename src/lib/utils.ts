@@ -1,31 +1,44 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { format } from "date-fns";
+import { tailwindMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return tailwindMerge(clsx(inputs));
 }
 
-export function formatDate(date: Date | string | null) {
-  if (!date) {
-    return "Unscheduled";
-  }
+export function formatPrice(value: number) {
+  return new Intl.NumberFormat("ja-JP", {
+    style: "currency",
+    currency: "JPY",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric"
-  }).format(new Date(date));
+export function formatDate(date: Date | string) {
+  return format(new Date(date), "yyyy.MM.dd");
 }
 
 export function slugify(value: string) {
   return value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 }
 
-export function absoluteUrl(path: string) {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  return new URL(path, baseUrl).toString();
+export function getBaseUrl() {
+  return process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+}
+
+export function parseBoolean(value: FormDataEntryValue | null) {
+  if (!value) {
+    return false;
+  }
+
+  return value === "on" || value === "true" || value === "1";
+}
+
+export function jsonError(message: string, status = 400) {
+  return Response.json({ error: message }, { status });
 }

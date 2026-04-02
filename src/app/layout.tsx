@@ -1,30 +1,45 @@
 import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import { Cormorant_Garamond, Manrope } from "next/font/google";
+
 import { Providers } from "@/components/providers";
-import { siteConfig } from "@/lib/site";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-const fraunces = Fraunces({
+const fontSans = Manrope({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+const fontDisplay = Cormorant_Garamond({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["300", "400", "600"],
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: { default: siteConfig.name, template: `%s | ${siteConfig.name}` },
-  description: siteConfig.description,
+  title: {
+    default: "Atelier Market",
+    template: "%s | Atelier Market",
+  },
+  description: "BOOTH-like digital goods marketplace built with Next.js 14.",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
-      <body>
-        <Providers>{children}</Providers>
+    <html lang="ja" className={`${fontSans.variable} ${fontDisplay.variable}`}>
+      <body className="text-foreground">
+        <Providers>
+          <div className="flex min-h-screen flex-col">
+            <SiteHeader />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+          </div>
+        </Providers>
       </body>
     </html>
   );

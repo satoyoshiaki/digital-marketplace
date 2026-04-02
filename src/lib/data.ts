@@ -1,157 +1,181 @@
-import { Prisma } from "@prisma/client";
+import { OrderStatus, ProductStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import type { ProductFilters } from "@/types";
 
-const publishedPostInclude = {
-  author: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true
-    }
-  },
+const productInclude = {
   category: true,
-  postTags: {
+  images: {
+    orderBy: {
+      order: "asc" as const,
+    },
+  },
+  files: true,
+  seller: {
     include: {
-      tag: true
-    }
-  }
-} satisfies Prisma.PostInclude;
-
-export async function getPublishedPosts() {
-  return prisma.post.findMany({
-    where: {
-      status: "PUBLISHED"
-    },
-    include: publishedPostInclude,
-    orderBy: {
-      publishedAt: "desc"
-    }
-  });
-}
-
-export async function getFeaturedPosts(limit = 3) {
-  return prisma.post.findMany({
-    where: {
-      status: "PUBLISHED"
-    },
-    include: publishedPostInclude,
-    orderBy: {
-      publishedAt: "desc"
-    },
-    take: limit
-  });
-}
-
-export async function getPostBySlug(slug: string) {
-  return prisma.post.findUnique({
-    where: { slug },
-    include: publishedPostInclude
-  });
-}
-
-export async function getPostsByCategorySlug(slug: string) {
-  return prisma.post.findMany({
-    where: {
-      status: "PUBLISHED",
-      category: {
-        slug
-      }
-    },
-    include: publishedPostInclude,
-    orderBy: {
-      publishedAt: "desc"
-    }
-  });
-}
-
-export async function getPostsByTagSlug(slug: string) {
-  return prisma.post.findMany({
-    where: {
-      status: "PUBLISHED",
-      postTags: {
-        some: {
-          tag: {
-            slug
-          }
-        }
-      }
-    },
-    include: publishedPostInclude,
-    orderBy: {
-      publishedAt: "desc"
-    }
-  });
-}
-
-export async function searchPosts(query: string) {
-  if (!query.trim()) {
-    return [];
-  }
-
-  return prisma.post.findMany({
-    where: {
-      status: "PUBLISHED",
-      OR: [
-        { title: { contains: query, mode: "insensitive" } },
-        { excerpt: { contains: query, mode: "insensitive" } },
-        { content: { contains: query, mode: "insensitive" } },
-        {
-          category: {
-            name: { contains: query, mode: "insensitive" }
-          }
+      user: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
         },
-        {
-          postTags: {
-            some: {
-              tag: {
-                name: { contains: query, mode: "insensitive" }
-              }
-            }
-          }
-        }
-      ]
+      },
     },
-    include: publishedPostInclude,
-    orderBy: {
-      publishedAt: "desc"
-    }
-  });
-}
+  },
+  _count: {
+    select: {
+      orderItems: true,
+    },
+  },
+} satisfies Prisma.ProductInclude;
 
-export async function getCategoriesWithCounts() {
+export async function getCategories() {
   return prisma.category.findMany({
-    include: {
-      _count: {
-        select: {
-          posts: {
-            where: {
-              status: "PUBLISHED"
-            }
-          }
-        }
-      }
-    },
     orderBy: {
-      name: "asc"
-    }
+      name: "asc",
+    },
   });
 }
 
-export async function getTagsWithCounts() {
-  const tags = await prisma.tag.findMany({
+export async function getFeaturedProducts() {
+  return prisma.product.findMany({
+    where: {
+      status: ProductStatus.PUBLISHED,
+      isFeatured: true,
+    },
+    include: productInclude,
+    take: 8,
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+export async function getProducts(filters: ProductFilters = {}) {
+  return prisma.product.findMany({
+    where: {
+      status: ProductStatus.PUBLISHED,
+      ...(filters.category ? { category: { slug: filters.category } } : {}),
+      ...(filters.search
+        ? {
+            OR: [
+              { title: { contains: filters.search, mode: "insensitive" } },
+              { description: { contains: filters.search, mode: "insensitive" } },
+              { seller: { displayName: { contains: filters.search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+      ...(filters.featured ? { isFeatured: true } : {}),
+    },
+    include: productInclude,
+    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+  });
+}
+
+export async function getProductById(id: string) {
+  return prisma.product.findUnique({
+    where: { id },
+    include: productInclude,
+  });
+}
+
+export async function getCartByUserId(userId: string) {
+  return prisma.cart.findUnique({
+    where: { userId },
     include: {
-      _count: {
-        select: {
-          postTags: true
-        }
-      }
+      items: {
+        include: {
+          product: {
+            include: {
+              images: {
+                orderBy: {
+                  order: "asc",
+                },
+              },
+              category: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+export async function getOrdersForUser(userId: string) {
+  return prisma.order.findMany({
+    where: {
+      buyerId: userId,
+      status: OrderStatus.PAID,
+    },
+    include: {
+      items: {
+        include: {
+          product: {
+            include: {
+              images: true,
+            },
+          },
+        },
+      },
+      downloads: true,
     },
     orderBy: {
-      name: "asc"
-    }
+      createdAt: "desc",
+    },
   });
+}
 
-  return tags;
+export async function getSellerDashboardData(sellerProfileId: string) {
+  const [products, orderItems, downloads] = await Promise.all([
+    prisma.product.findMany({
+      where: { sellerId: sellerProfileId },
+      include: {
+        images: true,
+        category: true,
+        _count: {
+          select: {
+            orderItems: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.orderItem.findMany({
+      where: {
+        product: {
+          sellerId: sellerProfileId,
+        },
+        order: {
+          status: OrderStatus.PAID,
+        },
+      },
+      include: {
+        order: true,
+      },
+    }),
+    prisma.download.count({
+      where: {
+        product: {
+          sellerId: sellerProfileId,
+        },
+      },
+    }),
+  ]);
+
+  const revenue = orderItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+
+  return {
+    products,
+    stats: {
+      revenue,
+      orders: orderItems.length,
+      products: products.length,
+      downloads,
+    },
+  };
 }
